@@ -1,0 +1,156 @@
+/* App.css */
+
+/* Style cho latex */
+.latex-container {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  align-items: flex-start;
+}
+
+.latex-container p {
+  margin: 0;
+  line-height: 1.2;
+  font-size: 1rem;
+}
+
+.latex-container .katex {
+  margin: 0 !important;
+  padding: 0 !important;
+  font-size: 1rem;
+}
+
+.latex-container > div > .katex-display {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+/* Container chính */
+.min-h-screen {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Container cho MathScanner và thanh upload */
+.upload-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  flex-grow: 1;
+  min-height: calc(100vh - 64px); /* Trừ chiều cao của header */
+}
+
+/* Khối chứa MathScanner và thanh upload */
+.upload-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem; /* Khoảng cách giữa chữ MathScanner và thanh upload */
+  width: 100%;
+  max-width: 800px; /* Giới hạn chiều rộng */
+}
+
+/* Đưa thanh upload về footer khi có messages */
+.footer-position {
+  padding: 16px;
+  border-top: 1px solid #2c2c2c;
+  background-color: #181818;
+  position: sticky;
+  bottom: 0;
+  flex-grow: 0;
+  min-height: auto;
+}
+
+/* Style cho thanh upload */
+.upload-container .flex {
+  padding: 20px 16px;
+  min-height: 70px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #242424;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 800px;
+}
+
+/* Style cho nút Upload */
+.upload-container .flex button {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0;
+  margin: 0;
+  line-height: 40px;
+  font-size: 16px;
+}
+
+/* Style cho nút Chọn file (label) */
+.upload-container .flex label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 8px;
+  background-color: #3a3a3a;
+  color: #d4d4d8;
+  border-radius: 9999px;
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  height: 50px;
+  max-width: 105px;
+  min-height: 0;
+  max-height: 45px;
+  overflow: hidden;
+  box-sizing: border-box;
+  position: relative;
+  transition: background-color 0.2s;
+  border: 1px solid #4b4b4b;
+}
+
+.upload-container .flex label i {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.upload-container .flex label:hover {
+  background-color: #4b4b4b;
+}
+
+/* Style cho văn bản trong thanh upload */
+.upload-container .flex span.upload-text {
+  flex-grow: 1;
+  text-align: left;
+  line-height: 1.2;
+  padding: 0;
+  margin-left: 4px;
+  color: #9ca3a1;
+  font-size: 1rem;
+}
+
+/* Style cho chữ MathScanner */
+.text-center {
+  margin-bottom: 0; /* Loại bỏ margin-bottom mặc định */
+}
+
+/* Style cho logo SVG */
+.scanner-lines {
+  stroke: #e5e7eb;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 20 15;
+  animation: scanMove 3s linear infinite;
+}
+
+@keyframes scanMove {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -35;
+  }
+}
