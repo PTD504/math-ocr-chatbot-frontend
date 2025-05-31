@@ -1,5 +1,3 @@
-/* App.css */
-
 /* Style cho latex */
 .latex-container {
   display: flex;
@@ -38,7 +36,7 @@
   align-items: center;
   width: 100%;
   flex-grow: 1;
-  min-height: calc(100vh - 64px); /* Trừ chiều cao của header */
+  min-height: calc(100vh - 64px);
 }
 
 /* Khối chứa MathScanner và thanh upload */
@@ -47,9 +45,9 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1rem; /* Khoảng cách giữa chữ MathScanner và thanh upload */
+  gap: 1rem;
   width: 100%;
-  max-width: 800px; /* Giới hạn chiều rộng */
+  max-width: 800px;
 }
 
 /* Đưa thanh upload về footer khi có messages */
@@ -134,7 +132,7 @@
 
 /* Style cho chữ MathScanner */
 .text-center {
-  margin-bottom: 0; /* Loại bỏ margin-bottom mặc định */
+  margin-bottom: 0;
 }
 
 /* Style cho logo SVG */
