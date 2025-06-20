@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { BlockMath } from "react-katex";
 import "katex/dist/katex.min.css";
 import "./App.css";
+import axios from "axios";
 
 function App() {
   const [messages, setMessages] = useState([]);
@@ -22,26 +23,63 @@ function App() {
     }
   };
 
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (!file) return;
 
     setIsLoading(true);
-    setTimeout(() => {
-      const mockResponse = {
-        latex: "x^2 + 2x + 1",
-      };
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      // Gửi yêu cầu tới endpoint /predict của FastAPI
+      const response = await axios.post(
+        "http://192.168.28.32:8000/predict",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
 
       setMessages((prevMessages) => [
         ...prevMessages,
         { type: "user", preview: previewUrl, id: `user-${Date.now()}` },
-        { type: "bot", latex: mockResponse.latex, id: `bot-${Date.now() + 1}` },
+        {
+          type: "bot",
+          latex: response.data.formula || "\\text{Không có công thức}",
+          id: `bot-${Date.now() + 1}`,
+        },
       ]);
-
+    } catch (error) {
+      console.error("Lỗi khi gửi yêu cầu tới API:", {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+      });
+      let errorMessage =
+        "\\text{Đã xảy ra lỗi khi xử lý yêu cầu. Vui lòng thử lại.}";
+      if (error.response?.status === 422) {
+        errorMessage =
+          "\\text{Lỗi: Trường file không hợp lệ. Vui lòng kiểm tra định dạng ảnh.}";
+      } else if (error.response?.status === 500) {
+        errorMessage = "\\text{Lỗi server. Vui lòng liên hệ đội backend.}";
+      }
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        { type: "user", preview: previewUrl, id: `user-${Date.now()}` },
+        {
+          type: "bot",
+          latex: errorMessage,
+          id: `bot-${Date.now() + 1}`,
+        },
+      ]);
+    } finally {
       setFile(null);
       setPreviewUrl(null);
       setIsLoading(false);
       setHasUploaded(true);
-    }, 1000);
+    }
   };
 
   const handleKeyDown = (event) => {
