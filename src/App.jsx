@@ -33,7 +33,7 @@ function App() {
 
       // Gửi yêu cầu tới endpoint /predict của FastAPI
       const response = await axios.post(
-        "http://192.168.28.32:8000/predict",
+        "handwritten-math-ocr-api/predict",
         formData,
         {
           headers: {
