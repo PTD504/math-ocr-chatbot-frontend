@@ -1,6 +1,6 @@
 export default function UploadBar({ file, isLoading, hasUploaded, onFileChange, onUpload, onKeyDown }) {
     return (
-        <div className="sticky bottom-0 bg-[#181818] border-t border-[#2c2c2c] p-4 z-10">
+        <div className="bg-[#181818] border-t border-[#2c2c2c] p-4 flex-shrink-0 w-full">
             <div
                 className="flex items-center gap-3 bg-[#242424] rounded-xl p-3 w-full max-w-4xl mx-auto shadow-lg"
                 tabIndex={0}

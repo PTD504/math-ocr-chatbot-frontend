@@ -251,3 +251,66 @@ input:focus-visible {
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.2);
 }
+
+/* Đảm bảo toàn bộ vùng chính có thanh cuộn bên ngoài */
+.flex-1 {
+    display: flex;
+    flex-direction: column;
+    height: 100vh; /* Đảm bảo chiều cao đầy đủ */
+}
+
+.flex-1\.flex-col\.min-h-0 {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.message-bubble {
+    max-width: 90%;
+}
+
+@media (min-width: 768px) {
+    .message-bubble {
+        max-width: 70%;
+    }
+}
+
+/* Đảm bảo thanh cuộn hoạt động tốt */
+.scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: #4b4b4b #2c2c2c;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+    background: #2c2c2c;
+    border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+    background: #4b4b4b;
+    border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: #5a5a5a;
+}
+
+/* Giữ nút đăng xuất cố định ở đầu */
+.sticky {
+    position: sticky;
+    top: 0;
+    background: #181818; /* Giữ nền khớp với giao diện */
+    z-index: 10; /* Đảm bảo hiển thị trên các thành phần khác */
+}
+
+/* Giữ thanh upload cố định ở bottom */
+.bg-\[181818-border\]-t {
+    position: sticky;
+    bottom: 0;
+    background: #181818; /* Giữ nền khớp */
+    z-index: 10; /* Đảm bảo hiển thị trên các thành phần khác */
+}

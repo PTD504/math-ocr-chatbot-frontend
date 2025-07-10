@@ -53,6 +53,15 @@ export default function App() {
         reader.readAsDataURL(file);
     });
 
+    // Hàm scroll xuống cuối
+    const scrollToBottom = useCallback(() => {
+        if (chatContainer.current) {
+            setTimeout(() => {
+                chatContainer.current.scrollTop = chatContainer.current.scrollHeight;
+            }, 50);
+        }
+    }, []);
+
     const handleUpload = async () => {
         if (!file) return;
         setIsLoading(true);
@@ -77,6 +86,9 @@ export default function App() {
         await saveMessage(userMessage, convId);
         if (messages.length === 0) await updateConversationTitle(convId, userMessage);
 
+        // Scroll xuống sau khi thêm tin nhắn user
+        setTimeout(() => scrollToBottom(), 100);
+
         try {
             const formData = new FormData();
             formData.append("file", file);
@@ -96,6 +108,9 @@ export default function App() {
             };
             setMessages((prev) => [...prev, botMsg]);
             await saveMessage(botMsg, convId);
+            
+            // Scroll xuống sau khi thêm tin nhắn bot
+            setTimeout(() => scrollToBottom(), 100);
         } catch (err) {
             const botMsg = {
                 type: "bot",
@@ -104,6 +119,8 @@ export default function App() {
             };
             setMessages((prev) => [...prev, botMsg]);
             await saveMessage(botMsg, convId);
+            
+            setTimeout(() => scrollToBottom(), 100);
         } finally {
             setFile(null);
             setPreviewUrl(null);
@@ -115,11 +132,10 @@ export default function App() {
         if (e.key === "Enter" && file && !isLoading) handleUpload();
     };
 
+    // Auto-scroll khi có tin nhắn mới
     useEffect(() => {
-        if (chatContainer.current) {
-            chatContainer.current.scrollTop = chatContainer.current.scrollHeight;
-        }
-    }, [messages]);
+        scrollToBottom();
+    }, [messages, scrollToBottom]);
 
     useEffect(() => () => {
         if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -130,7 +146,7 @@ export default function App() {
     }
 
     return (
-        <div className="min-h-screen w-full flex bg-[#181818] text-[#e5e7eb] font-sans">
+        <div className="h-screen w-full flex bg-[#181818] text-[#e5e7eb] font-sans">
             {userProfile && (
                 <ChatSidebar
                     conversations={conversations}
@@ -149,7 +165,7 @@ export default function App() {
                     getUserInitials={(name) => name?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)}
                 />
             )}
-            <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 flex flex-col min-h-0">
                 <Header
                     userProfile={userProfile}
                     onMenuClick={() => setSidebarOpen(true)}
@@ -163,30 +179,38 @@ export default function App() {
                         firebaseAvailable={!!auth}
                     />
                 ) : (
-                    <div className="flex-1 flex flex-col bg-[#181818] overflow-hidden">
+                    <div className="flex-1 flex flex-col min-h-0">
+                        {/* Thanh thông báo session (nếu có) */}
                         {userProfile?.isAnonymous && timeRemaining && (
-                            <div className="bg-yellow-600 text-white p-3 text-center text-sm">
+                            <div className="bg-yellow-600 text-white p-3 text-center text-sm flex-shrink-0">
                                 ⏰ Phiên khách còn: <strong>{Math.floor(timeRemaining / 60000)}:{String(Math.floor((timeRemaining % 60000) / 1000)).padStart(2, '0')}</strong>
                             </div>
                         )}
-                        <div className="flex-1 flex justify-center px-4 overflow-hidden">
-                            <div className="w-full max-w-4xl flex flex-col overflow-hidden">
-                                <div className="flex justify-center py-4">
-                                    <button
-                                        onClick={handleLogout}
-                                        className="py-2 px-4 rounded-full bg-red-600 text-white font-semibold hover:bg-red-700 shadow-md"
-                                    >
-                                        {userProfile?.isAnonymous ? "Kết thúc phiên khách" : "Đăng xuất"}
-                                    </button>
-                                </div>
+                        
+                        {/* Thanh nút đăng xuất cố định */}
+                        <div className="flex justify-center py-4 bg-[#181818] border-b border-[#2c2c2c] flex-shrink-0 sticky top-0 z-10">
+                            <button
+                                onClick={handleLogout}
+                                className="py-2 px-4 rounded-full bg-red-600 text-white font-semibold hover:bg-red-700 shadow-md"
+                            >
+                                {userProfile?.isAnonymous ? "Kết thúc phiên khách" : "Đăng xuất"}
+                            </button>
+                        </div>
+
+                        {/* Khu vực chat - overflow-y-auto để có thanh cuộn chính */}
+                        <div className="flex-1 overflow-y-auto scrollbar-thin">
+                            <div className="flex justify-center min-h-full">
+                                <div className="w-full max-w-4xl flex flex-col">
                                 <ChatArea
                                     messages={messages}
                                     isLoading={isLoading}
                                     userProfile={userProfile}
-                                    chatContainerRef={chatContainer}
                                 />
+                                </div>
                             </div>
                         </div>
+
+                        {/* Thanh upload cố định ở bottom */}
                         <UploadBar
                             file={file}
                             isLoading={isLoading}
