@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  # 1. Chatbot Frontend (Client) Service
+  client:
+    build:
+      context: ./client # Path to your client directory containing Dockerfile
+      dockerfile: Dockerfile
+    container_name: chatbot-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./client:/app 
+      - /app/node_modules
+    environment:
+      # Ensure these match what your frontend expects for backend URLs
+      - VITE_BACKEND_URL=http://localhost:8000 # For local access
+      - VITE_BACKEND_URL_DOCKER=http://server:8000 # For internal docker network access
+      - VITE_FIREBASE_API_KEY=${FIREBASE_API_KEY} 
+    depends_on:
+      - server # Frontend depends on the Chatbot Backend
+    networks:
+      - chatbot_network
+    restart: unless-stopped
+
+  # 2. Chatbot Backend (Server) Service
+  server:
+    build:
+      context: ./server # Path to your server directory containing Dockerfile
+      dockerfile: Dockerfile
+    container_name: chatbot-backend
+    ports:
+      - "8000:8000" # Expose FastAPI port
+    volumes:
+      - ./server:/app # Mount server code for easier development
+      - ./server/firebase_admin_key.json:/app/firebase_admin_key.json:ro # Mount Firebase key (read-only)
+    environment:
+      # Pass Firebase service account key as JSON string if preferred, or rely on mounted file
+      # - FIREBASE_SERVICE_ACCOUNT_KEY_JSON=${FIREBASE_SERVICE_ACCOUNT_KEY_JSON}
+      - FIREBASE_SERVICE_ACCOUNT_KEY_PATH=/app/firebase_admin_key.json # Use mounted path
+      - MODEL_API_BASE_URL=http://model-api:8001 # Internal network URL for Model API
+      - MODEL_API_KEY=${MODEL_API_KEY} # Pass your Model API key from host .env
+    depends_on:
+      - model-api
+    networks:
+      - chatbot_network
+    restart: unless-stopped
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"] # --reload for dev
+
+  # 3. Model API Backend Service (Placeholder - Adjust based on your actual Model API)
+  model-api:
+    # If your Model API has its own Dockerfile in a separate directory (e.g., ./model_api_repo)
+    build:
+      context: ./model_api_repo 
+      dockerfile: Dockerfile 
+
+    container_name: model-api-backend
+    ports:
+      - "8001:8001" # Expose Model API port
+    volumes:
+      - ./model_api_repo:/app # Mount model API code for dev (adjust path)
+    environment:
+      # Any environment variables your Model API needs
+      - API_KEY=${MODEL_API_KEY}
+    networks:
+      - chatbot_network
+    restart: unless-stopped
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001", "--reload"] # Adjust command based on your Model API entrypoint
+
+networks:
+  chatbot_network:
+    driver: bridge
