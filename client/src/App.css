@@ -252,11 +252,10 @@ input:focus-visible {
     border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-/* Đảm bảo toàn bộ vùng chính có thanh cuộn bên ngoài */
 .flex-1 {
     display: flex;
     flex-direction: column;
-    height: 100vh; /* Đảm bảo chiều cao đầy đủ */
+    height: 100vh; 
 }
 
 .flex-1\.flex-col\.min-h-0 {
@@ -275,7 +274,6 @@ input:focus-visible {
     }
 }
 
-/* Đảm bảo thanh cuộn hoạt động tốt */
 .scrollbar-thin {
     scrollbar-width: thin;
     scrollbar-color: #4b4b4b #2c2c2c;
@@ -299,18 +297,29 @@ input:focus-visible {
     background: #5a5a5a;
 }
 
-/* Giữ nút đăng xuất cố định ở đầu */
 .sticky {
     position: sticky;
     top: 0;
-    background: #181818; /* Giữ nền khớp với giao diện */
-    z-index: 10; /* Đảm bảo hiển thị trên các thành phần khác */
+    background: #181818; 
+    z-index: 10; 
 }
 
-/* Giữ thanh upload cố định ở bottom */
 .bg-\[181818-border\]-t {
     position: sticky;
     bottom: 0;
-    background: #181818; /* Giữ nền khớp */
-    z-index: 10; /* Đảm bảo hiển thị trên các thành phần khác */
+    background: #181818; 
+    z-index: 10; 
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.App {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }

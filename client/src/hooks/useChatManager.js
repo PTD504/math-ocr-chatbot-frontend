@@ -1,7 +1,5 @@
-// client/src/hooks/useChatManager.js
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
-// import { collection, doc, setDoc, updateDoc, addDoc, deleteDoc, getDocs, onSnapshot, query, orderBy } from "firebase/firestore"; // REMOVE THIS LINE
 
 export default function useChatManager(userProfile) {
     const [messages, setMessages] = useState([]);
@@ -10,9 +8,8 @@ export default function useChatManager(userProfile) {
 
     const API_BASE_URL = import.meta.env.PROD 
         ? import.meta.env.VITE_BACKEND_URL_DOCKER || import.meta.env.VITE_BACKEND_URL 
-        : import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+        : import.meta.env.VITE_BACKEND_URL;
 
-    // Helper to get auth headers
     const getAuthHeaders = useCallback(() => {
         if (!userProfile?.id_token) {
             console.warn("No ID token found for authenticated request.");
@@ -47,12 +44,18 @@ export default function useChatManager(userProfile) {
         }
     }, [userProfile, API_BASE_URL, getAuthHeaders]);
 
-    const updateConversationTitle = useCallback(async (convId, firstMsg) => {
+    const updateConversationTitle = useCallback(async (convId, firstMsgOrCustomTitle) => {
         if (!convId || !userProfile?.uid) return;
 
-        const title = firstMsg?.type === 'user'
-            ? `Phân tích công thức ${new Date().toLocaleDateString('vi-VN')}`
-            : "Cuộc trò chuyện mới";
+        let title;
+
+        if (typeof firstMsgOrCustomTitle === 'string') {
+            title = firstMsgOrCustomTitle.trim();
+        } else {
+            title = firstMsgOrCustomTitle?.type === 'user'
+                ? `Phân tích công thức ${new Date().toLocaleDateString('vi-VN')}`
+                : "Cuộc trò chuyện mới";
+        }
 
         try {
             await axios.put(
@@ -62,80 +65,70 @@ export default function useChatManager(userProfile) {
             );
             setConversations(prev =>
                 prev.map(conv =>
-                    conv.id === convId ? { ...conv, title: title } : conv
+                    conv.id === convId ? { ...conv, title } : conv
                 )
             );
             console.log(`Conversation ${convId} title updated to: ${title}`);
         } catch (error) {
             console.error(`Error updating conversation ${convId} title:`, error.response?.data || error.message);
-            // Optionally, handle error state or revert title in UI
         }
     }, [userProfile, API_BASE_URL, getAuthHeaders]);
 
-    const saveMessage = useCallback(async (message) => {
-        if (!currentConversationId || !userProfile?.uid) {
+    const saveMessage = useCallback(async (message, conversationId) => {
+        if (!conversationId || !userProfile?.uid) {
             console.error("Not in a conversation or user not authenticated to save message.");
             return;
         }
         try {
-            // Backend will handle adding ID, timestamp, and updating conversation metadata
             const response = await axios.post(
-                `${API_BASE_URL}/chat/conversations/${currentConversationId}/messages`,
-                message, // message object { type, content, latex }
+                `${API_BASE_URL}/chat/conversations/${conversationId}/messages`,
+                message, // { type, content, latex, imageData, preview, ... }
                 getAuthHeaders()
             );
             const savedMessage = response.data;
-            setMessages(prev => [...prev, savedMessage]);
 
-            // Update lastMessageAt and messageCount in conversations state
+            setMessages(prev => [...prev, message]);
+            console.log(`Message saved: ${savedMessage.id}`);
             setConversations(prev =>
                 prev.map(conv =>
-                    conv.id === currentConversationId ? {
+                    conv.id === conversationId ? {
                         ...conv,
                         lastMessageAt: savedMessage.timestamp,
-                        messageCount: conv.messageCount + 1 // Increment message count
+                        messageCount: conv.messageCount + 1
                     } : conv
-                ).sort((a, b) => b.lastMessageAt - a.lastMessageAt) // Re-sort by lastMessageAt
+                ).sort((a, b) => b.lastMessageAt - a.lastMessageAt)
             );
 
         } catch (error) {
             console.error("Error saving message:", error.response?.data || error.message);
             alert(`Lưu tin nhắn thất bại: ${error.response?.data?.detail || error.message}`);
         }
-    }, [userProfile, currentConversationId, API_BASE_URL, getAuthHeaders]);
+    }, [userProfile, API_BASE_URL, getAuthHeaders]);
 
 
     const loadConversations = useCallback(async () => {
-        if (!userProfile?.uid) {
+        if (!userProfile?.uid || userProfile.isAnonymous) {
             setConversations([]);
             setCurrentConversationId(null);
             setMessages([]);
             return;
         }
         try {
+            setConversations(null); // Set to null to indicate loading state
             const response = await axios.get(
                 `${API_BASE_URL}/chat/conversations`,
                 getAuthHeaders()
             );
             const loadedConversations = response.data;
             setConversations(loadedConversations);
-
-            if (loadedConversations.length > 0) {
-                // If there are existing conversations, select the latest one
-                setCurrentConversationId(loadedConversations[0].id);
-            } else {
-                // If no conversations, create a new one
-                const newId = await createNewConversation();
-                setCurrentConversationId(newId);
-            }
+            setCurrentConversationId(null);
         } catch (error) {
             console.error("Error loading conversations:", error.response?.data || error.message);
             alert(`Tải cuộc trò chuyện thất bại: ${error.response?.data?.detail || error.message}`);
-            // Fallback: create a new one if loading fails
-            const newId = await createNewConversation();
-            setCurrentConversationId(newId);
+            setConversations([]);
+            setCurrentConversationId(null);
         }
-    }, [userProfile, API_BASE_URL, getAuthHeaders, createNewConversation]);
+    }, [userProfile, API_BASE_URL, getAuthHeaders]);
 
     const loadMessages = useCallback(async (convId) => {
         if (!convId || !userProfile?.uid) {
@@ -169,13 +162,8 @@ export default function useChatManager(userProfile) {
             );
             setConversations(prev => prev.filter(c => c.id !== convId));
             if (currentConversationId === convId) {
-                const rest = conversations.filter(c => c.id !== convId);
-                if (rest.length > 0) {
-                    setCurrentConversationId(rest[0].id);
-                } else {
-                    const newId = await createNewConversation();
-                    setCurrentConversationId(newId);
-                }
+                setCurrentConversationId(null);
+                setMessages([]); 
             }
             console.log(`Conversation ${convId} deleted.`);
         } catch (error) {
@@ -184,10 +172,15 @@ export default function useChatManager(userProfile) {
         }
     }, [userProfile, currentConversationId, conversations, API_BASE_URL, getAuthHeaders, createNewConversation]);
 
-
     useEffect(() => {
         if (userProfile) {
-            loadConversations();
+            if (!userProfile.isAnonymous) {
+                loadConversations(); 
+            } else {
+                setConversations([]);
+                setCurrentConversationId(null);
+                setMessages([]);
+            }
         } else {
             setConversations([]);
             setCurrentConversationId(null);

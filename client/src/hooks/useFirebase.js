@@ -1,11 +1,9 @@
-// client/src/hooks/useFirebase.js
 import { useState, useCallback, useRef, useEffect } from "react";
 import axios from "axios";
 import { signInAnonymously, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth"; // Import onAuthStateChanged
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 
-// Firebase client config (PUBLIC - safe to keep on frontend)
 const firebaseConfig = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
     authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -17,7 +15,7 @@ const firebaseConfig = {
 
 let app;
 let auth;
-let firebaseInitialized = false; // Flag to ensure single initialization
+let firebaseInitialized = false;
 
 try {
     if (!firebaseInitialized) {
@@ -29,7 +27,6 @@ try {
 } catch (error) {
     console.error("Error initializing Firebase client-side auth:", error);
     auth = null;
-    // We should also set a state for this error
 }
 
 export default function useFirebase(setUserProfile) {
@@ -37,8 +34,8 @@ export default function useFirebase(setUserProfile) {
     const countdownTimerRef = useRef(null);
     const [sessionExpiry, setSessionExpiry] = useState(null);
     const [timeRemaining, setTimeRemaining] = useState(null);
-    const [firebaseClientLoaded, setFirebaseClientLoaded] = useState(false); // Start as false
-    const [firebaseError, setFirebaseError] = useState(null); // Add firebaseError state
+    const [firebaseClientLoaded, setFirebaseClientLoaded] = useState(false);
+    const [firebaseError, setFirebaseError] = useState(null);
 
     const API_BASE_URL = import.meta.env.PROD
         ? import.meta.env.VITE_BACKEND_URL_DOCKER || import.meta.env.VITE_BACKEND_URL
@@ -87,12 +84,12 @@ export default function useFirebase(setUserProfile) {
                 id_token: idToken,
             });
             console.log("Google sign-in successful, token sent to backend.");
-            setFirebaseError(null); // Clear any previous errors on successful login
+            setFirebaseError(null);
         } catch (error) {
             console.error("Error with Google sign-in or backend token verification:", error);
             const errorMessage = error.message || "Unknown error during Google login.";
             alert(`Đăng nhập Google thất bại: ${errorMessage}`);
-            setFirebaseError(errorMessage); // Set error state
+            setFirebaseError(errorMessage);
         }
     }, [setUserProfile, API_BASE_URL]);
 
@@ -114,22 +111,32 @@ export default function useFirebase(setUserProfile) {
             });
             startSessionTimer();
             console.log("Anonymous sign-in successful, token sent to backend.");
-            setFirebaseError(null); // Clear any previous errors on successful login
+            setFirebaseError(null);
         } catch (error) {
             console.error("Error with anonymous sign-in or backend token verification:", error);
             const errorMessage = error.message || "Unknown error during guest login.";
             alert(`Đăng nhập khách thất bại: ${errorMessage}`);
-            setFirebaseError(errorMessage); // Set error state
+            setFirebaseError(errorMessage);
         }
     };
 
-    const handleLogout = async () => {
+    const handleLogout = async (options = {}) => {
+        const {
+            skipConfirm = false
+        } = options;
+
+        if (!skipConfirm) {
+            const confirmed = window.confirm("Bạn có chắc chắn muốn đăng xuất?");
+            if (!confirmed) return;
+        }
+
         clearSessionTimers();
         if (auth) {
             await signOut(auth);
         }
-        setUserProfile(null); // Explicitly set to null on logout
-        setFirebaseError(null); // Clear any errors
+        
+        setUserProfile(null);
+        setFirebaseError(null);
         console.log("User logged out.");
     };
 
@@ -137,7 +144,7 @@ export default function useFirebase(setUserProfile) {
         const expiryTime = Date.now() + 15 * 60 * 1000;
         setSessionExpiry(expiryTime);
         sessionTimerRef.current = setTimeout(() => {
-            handleLogout();
+            handleLogout({ skipConfirm: true });
             alert("Phiên khách hết hạn.");
         }, 15 * 60 * 1000);
 
@@ -148,52 +155,52 @@ export default function useFirebase(setUserProfile) {
         }, 1000);
     };
 
-    // THIS IS THE CRUCIAL EFFECT TO LISTEN FOR AUTH STATE CHANGES
     useEffect(() => {
         if (!auth) {
-            setFirebaseClientLoaded(true); // Still set loaded to true even if auth failed, to allow showing error
+            setFirebaseClientLoaded(true);
             setFirebaseError("Firebase authentication could not be initialized.");
             return;
         }
 
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
+                if (user.isAnonymous) {
+                    console.log("Firebase Auth State Changed: User is anonymous.");
+                    setUserProfile(null);
+                    setFirebaseClientLoaded(true);
+                    return;
+                }
+
                 try {
-                    // User is signed in (either new login or persisted session)
                     const idToken = await user.getIdToken();
-                    // Send token to backend to get the full user profile or verify
                     const backendUserProfile = await sendTokenToBackend(idToken);
+
                     setUserProfile({
                         ...backendUserProfile,
                         id_token: idToken,
                     });
-                    if (user.isAnonymous) {
-                        startSessionTimer(); // Restart timer for anonymous users if session persists
-                    } else {
-                        clearSessionTimers(); // Clear any guest timers for authenticated users
-                    }
-                    setFirebaseError(null); // Clear any errors on successful auth state change
+                    
+                    clearSessionTimers();
+                    setFirebaseError(null);
                 } catch (error) {
                     console.error("Error processing persisted user session:", error);
                     const errorMessage = `Lỗi xử lý phiên người dùng: ${error.message}`;
                     setFirebaseError(errorMessage);
-                    setUserProfile(null); // Ensure user is null on error
-                    clearSessionTimers(); // Clear timers on error
+                    setUserProfile(null); 
+                    clearSessionTimers(); 
                     signOut(auth); // Force sign out if there's a backend verification error
                 }
             } else {
-                // User is signed out or no user is signed in
                 console.log("Firebase Auth State Changed: User signed out or no user.");
-                setUserProfile(null); // Explicitly set to null
+                setUserProfile(null);
                 clearSessionTimers();
-                setFirebaseError(null); // Clear errors when logged out
+                setFirebaseError(null);
             }
-            setFirebaseClientLoaded(true); // Firebase auth state is now known
+            setFirebaseClientLoaded(true);
         });
 
-        // Cleanup the subscription on unmount
         return () => unsubscribe();
-    }, [setUserProfile, API_BASE_URL]); // Add setUserProfile and API_BASE_URL to dependencies
+    }, [setUserProfile, API_BASE_URL]);
 
     return {
         handleGoogleLogin,
@@ -202,6 +209,6 @@ export default function useFirebase(setUserProfile) {
         sessionExpiry,
         timeRemaining,
         firebaseClientLoaded,
-        firebaseError, // Expose firebaseError
+        firebaseError,
     };
 }

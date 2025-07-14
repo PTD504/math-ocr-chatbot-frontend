@@ -10,11 +10,14 @@ const ChatSidebar = ({
     onDeleteConversation,
     isOpen,
     onClose,
-    isLoading,
+    onRenameConversation,
+    onLogout,
     userProfile,
     getUserInitials
 }) => {
     const [deleteConfirm, setDeleteConfirm] = useState(null);
+    const [editingTitleId, setEditingTitleId] = useState(null);
+    const [editingValue, setEditingValue] = useState('');
 
     const formatTimeAgo = (timestamp) => {
         try {
@@ -23,6 +26,30 @@ const ChatSidebar = ({
             return 'Vừa xong';
         }
     };
+
+    const handleRename = async (conversationId) => {
+        const trimmed = editingValue.trim();
+        if (trimmed === '' || trimmed.length > 100) {
+            alert("Tên đoạn hội thoại không hợp lệ (tối đa 100 ký tự).");
+            cancelRename();
+            return;
+        }
+
+        try {
+            await onRenameConversation(conversationId, trimmed);
+        } catch (err) {
+            alert("Đổi tên thất bại.");
+        }
+
+        setEditingTitleId(null);
+        setEditingValue('');
+    };
+
+    const cancelRename = () => {
+        setEditingTitleId(null);
+        setEditingValue('');
+    };
+
 
     const handleDeleteClick = (conversationId, e) => {
         e.stopPropagation();
@@ -73,7 +100,7 @@ const ChatSidebar = ({
                                 {userProfile?.name}
                             </p>
                             <p className="text-xs text-[#a0a0a0]">
-                                {userProfile?.isAnonymous ? 'Tài khoản khách' : 'Đã đăng nhập'}
+                                Đã đăng nhập
                             </p>
                         </div>
                     </div>
@@ -100,7 +127,7 @@ const ChatSidebar = ({
 
                 {/* Conversations List */}
                 <div className="flex-1 overflow-y-auto px-4 pb-4">
-                    {isLoading ? (
+                    {conversations === null ? (
                         <div className="flex items-center justify-center h-32">
                             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#e5e7eb]"></div>
                         </div>
@@ -156,9 +183,32 @@ const ChatSidebar = ({
                                         <>
                                             <div className="flex items-start justify-between">
                                                 <div className="flex-1 min-w-0">
-                                                    <h4 className="text-[#e5e7eb] font-medium text-sm truncate mb-1">
-                                                        {conversation.title}
-                                                    </h4>
+                                                    {editingTitleId === conversation.id ? (
+                                                        <input
+                                                            value={editingValue}
+                                                            onChange={(e) => setEditingValue(e.target.value)}
+                                                            onBlur={() => handleRename(conversation.id)}
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Enter') handleRename(conversation.id);
+                                                                if (e.key === 'Escape') cancelRename();
+                                                            }}
+                                                            className="w-full bg-transparent border border-[#4b4b4b] text-[#e5e7eb] text-sm p-1 rounded"
+                                                            maxLength={100}
+                                                            autoFocus
+                                                        />
+                                                    ) : (
+                                                        <h4
+                                                            className="text-[#e5e7eb] font-medium text-sm truncate mb-1 cursor-pointer"
+                                                            onDoubleClick={() => {
+                                                                setEditingTitleId(conversation.id);
+                                                                setEditingValue(conversation.title);
+                                                            }}
+                                                            title="Nhấp đúp để đổi tên"
+                                                        >
+                                                            {conversation.title}
+                                                        </h4>
+                                                    )}
+
                                                     <div className="flex items-center gap-2 text-xs text-[#a0a0a0]">
                                                         <span>{formatTimeAgo(conversation.lastMessageAt)}</span>
                                                         {conversation.messageCount > 0 && (
@@ -191,11 +241,23 @@ const ChatSidebar = ({
 
                 {/* Footer */}
                 <div className="p-4 border-t border-[#2c2c2c]">
-                    <div className="text-xs text-[#6b6b6b] text-center">
-                        <p>Math LaTeX Assistant</p>
-                        <p className="mt-1">
-                            {userProfile?.isAnonymous ? 'Phiên khách' : 'Đã đăng nhập'}
-                        </p>
+                    <div className="text-xs text-[#6b6b6b] text-center space-y-2">
+                        <div>
+                            <p>Math LaTeX Assistant</p>
+                            <p className="mt-1">
+                                Đã đăng nhập
+                            </p>
+                        </div>
+
+                        {/* Logout Button */}
+                        <div class="flex justify-center">
+                            <button
+                                onClick={onLogout}
+                                className="px-3 py-1 bg-red-600 text-white font-semibold hover:bg-red-700 shadow-md rounded-md text-sm"
+                            >
+                                Đăng xuất
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
