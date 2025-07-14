@@ -1,4 +1,3 @@
-# server/app/auth.py
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import firebase_admin
@@ -10,7 +9,7 @@ import logging
 from typing import Optional, Dict
 from pydantic import BaseModel
 
-from models import UserProfile # Import UserProfile model
+from models import UserProfile
 
 load_dotenv()
 
@@ -137,7 +136,7 @@ async def verify_token_endpoint(
             detail=f"Invalid or expired token: {e}"
         )
 
-# Example protected endpoint (just for demonstration)
+# Protected endpoint
 @router.get("/me", response_model=UserProfile)
 async def get_my_profile(current_user: UserProfile = Depends(get_current_user)):
     """

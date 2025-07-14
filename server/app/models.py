@@ -1,4 +1,3 @@
-# server/app/models.py
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
@@ -11,20 +10,21 @@ class UserProfile(BaseModel):
     picture: Optional[str] = None
     isAnonymous: bool = False
 
-# Chat Message Model
-class Message(BaseModel):
-    id: str
-    conversationId: str
-    type: str # "user" or "bot"
-    content: Optional[str] = None # For user message (image URL or text)
-    latex: Optional[str] = None # For bot message (LaTeX formula)
-    timestamp: int # Unix timestamp in milliseconds
-
-# New Message for request body
-class NewMessage(BaseModel):
+class MessageBase(BaseModel):
     type: str
     content: Optional[str] = None
     latex: Optional[str] = None
+    imageData: Optional[str] = None
+    preview: Optional[str] = None
+    fileName: Optional[str] = None
+
+class NewMessage(MessageBase):
+    pass
+
+class Message(MessageBase):
+    id: str
+    conversationId: str
+    timestamp: int
 
 # Conversation Model
 class Conversation(BaseModel):
@@ -33,7 +33,7 @@ class Conversation(BaseModel):
     createdAt: int
     lastMessageAt: int
     messageCount: int = 0
-    userType: str # 'anonymous' or 'authenticated'
+    userType: str
 
 # Update Conversation Title
 class UpdateConversationTitle(BaseModel):

@@ -1,15 +1,15 @@
-# server/app/chat.py
 from fastapi import APIRouter, Depends, HTTPException, status
 from firebase_admin import firestore
 import logging
 from typing import List, Optional
 from datetime import datetime
+import os
 
 from models import UserProfile, Conversation, Message, NewMessage, UpdateConversationTitle
-from auth import get_current_user # Dependency to get current user
+from auth import get_current_user
 
 logger = logging.getLogger(__name__)
-db_firestore = firestore.client() # Get Firestore client
+db_firestore = firestore.client()
 
 router = APIRouter()
 
@@ -21,11 +21,9 @@ def get_conversations_ref(uid: str):
 def get_messages_ref(uid: str, conversation_id: str):
     return get_conversations_ref(uid).document(conversation_id).collection('messages')
 
+# Endpoint to get all conversations for the current user
 @router.get("/conversations", response_model=List[Conversation])
 async def get_conversations(current_user: UserProfile = Depends(get_current_user)):
-    """
-    Retrieves all conversations for the current authenticated user, ordered by lastMessageAt.
-    """
     try:
         conversations_query = get_conversations_ref(current_user.uid).order_by('lastMessageAt', direction=firestore.Query.DESCENDING)
         docs = conversations_query.stream()
@@ -38,11 +36,9 @@ async def get_conversations(current_user: UserProfile = Depends(get_current_user
         logger.error(f"Error retrieving conversations for user {current_user.uid}: {e}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to retrieve conversations.")
 
+# Endpoint to create a new conversation
 @router.post("/conversations", response_model=Conversation)
 async def create_new_conversation(current_user: UserProfile = Depends(get_current_user)):
-    """
-    Creates a new conversation for the current authenticated user.
-    """
     try:
         new_conv_id = f"conv_{int(datetime.now().timestamp() * 1000)}_{os.urandom(4).hex()}"
         current_time = int(datetime.now().timestamp() * 1000) # Milliseconds timestamp
@@ -56,29 +52,32 @@ async def create_new_conversation(current_user: UserProfile = Depends(get_curren
             userType='anonymous' if current_user.isAnonymous else 'authenticated'
         )
         
-        await get_conversations_ref(current_user.uid).document(new_conv_id).set(conversation_data.model_dump())
+        get_conversations_ref(current_user.uid).document(new_conv_id).set(conversation_data.model_dump())
         logger.info(f"Created new conversation {new_conv_id} for user {current_user.uid}")
         return conversation_data
     except Exception as e:
-        logger.error(f"Error creating new conversation for user {current_user.uid}: {e}", exc_info=True)
+        logger.error(f"Failed to create conversation for UID {current_user.uid}: {e}", exc_info=True)
+        
+        if "PERMISSION_DENIED" in str(e) or "Missing or insufficient permissions" in str(e):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Permission denied by Firestore rules.")
+        
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create new conversation.")
 
+
+# Endpoint to update conversation title
 @router.put("/conversations/{conversation_id}/title", response_model=Conversation)
 async def update_conversation_title(
     conversation_id: str,
     update_data: UpdateConversationTitle,
     current_user: UserProfile = Depends(get_current_user)
 ):
-    """
-    Updates the title of a specific conversation.
-    """
     try:
         conv_ref = get_conversations_ref(current_user.uid).document(conversation_id)
-        conv_doc = await conv_ref.get()
+        conv_doc = conv_ref.get()
         if not conv_doc.exists:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
         
-        await conv_ref.update({"title": update_data.title})
+        conv_ref.update({"title": update_data.title})
         
         updated_conv_data = conv_doc.to_dict()
         updated_conv_data["title"] = update_data.title
@@ -90,37 +89,33 @@ async def update_conversation_title(
         logger.error(f"Error updating conversation {conversation_id} title for user {current_user.uid}: {e}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to update conversation title.")
 
+# Endpoint to delete a conversation and all its messages
 @router.delete("/conversations/{conversation_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_conversation(
     conversation_id: str,
     current_user: UserProfile = Depends(get_current_user)
 ):
-    """
-    Deletes a conversation and all its associated messages.
-    """
     try:
         # Delete all messages in the conversation subcollection
         messages_ref = get_messages_ref(current_user.uid, conversation_id)
         docs = messages_ref.stream()
         for doc in docs:
-            await doc.reference.delete()
+            doc.reference.delete()
         
         # Delete the conversation document itself
-        await get_conversations_ref(current_user.uid).document(conversation_id).delete()
+        get_conversations_ref(current_user.uid).document(conversation_id).delete()
         logger.info(f"Deleted conversation {conversation_id} and its messages for user {current_user.uid}")
         return {"message": "Conversation deleted successfully"}
     except Exception as e:
         logger.error(f"Error deleting conversation {conversation_id} for user {current_user.uid}: {e}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to delete conversation.")
 
+# Endpoint to get messages for a specific conversation
 @router.get("/conversations/{conversation_id}/messages", response_model=List[Message])
 async def get_messages(
     conversation_id: str,
     current_user: UserProfile = Depends(get_current_user)
 ):
-    """
-    Retrieves all messages for a specific conversation, ordered by timestamp.
-    """
     try:
         messages_query = get_messages_ref(current_user.uid, conversation_id).order_by('timestamp', direction=firestore.Query.ASCENDING)
         docs = messages_query.stream()
@@ -133,18 +128,16 @@ async def get_messages(
         logger.error(f"Error retrieving messages for conversation {conversation_id} and user {current_user.uid}: {e}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to retrieve messages.")
 
+# Endpoint to add a new message to a conversation
 @router.post("/conversations/{conversation_id}/messages", response_model=Message)
 async def add_message(
     conversation_id: str,
     new_message: NewMessage,
     current_user: UserProfile = Depends(get_current_user)
 ):
-    """
-    Adds a new message to a specific conversation and updates conversation's lastMessageAt and messageCount.
-    """
     try:
         conv_ref = get_conversations_ref(current_user.uid).document(conversation_id)
-        conv_doc = await conv_ref.get()
+        conv_doc = conv_ref.get()
         if not conv_doc.exists:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
         
@@ -157,13 +150,16 @@ async def add_message(
             type=new_message.type,
             content=new_message.content,
             latex=new_message.latex,
+            imageData=new_message.imageData,
+            preview=new_message.preview,
+            fileName=new_message.fileName,
             timestamp=current_time
         )
         
-        await get_messages_ref(current_user.uid, conversation_id).document(message_id).set(message_data.model_dump())
+        get_messages_ref(current_user.uid, conversation_id).document(message_id).set(message_data.model_dump())
         
         # Update conversation's lastMessageAt and messageCount
-        await conv_ref.update({
+        conv_ref.update({
             "lastMessageAt": current_time,
             "messageCount": firestore.Increment(1)
         })

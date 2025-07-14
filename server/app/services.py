@@ -1,11 +1,8 @@
-# server/app/services.py
-import os
 import httpx
 import logging
-import base64
 
 from fastapi import HTTPException, status
-from config import settings # Assuming you have a settings object
+from config import settings 
 
 logger = logging.getLogger(__name__)
 
@@ -22,16 +19,12 @@ async def process_image_with_model(image_data: bytes) -> tuple[str, float]:
 
     if not model_api_key:
         logger.warning("MODEL_API_KEY is not configured. Calling Model API without authentication.")
-        # In production, you might want to force this.
 
     headers = {}
     if model_api_key:
         headers["X-API-Key"] = model_api_key
-        # Or if your model API uses Bearer token
-        # headers["Authorization"] = f"Bearer {model_api_key}"
 
-    # Prepare data for multipart/form-data upload
-    files = {'file': ('image.png', image_data, 'image/png')} # Or image/jpeg based on actual image type
+    files = {'file': ('image.png', image_data, 'image/png')} # Assuming the image is in PNG format
 
     async with httpx.AsyncClient() as client:
         try:

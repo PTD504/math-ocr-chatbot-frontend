@@ -1,4 +1,3 @@
-# server/app/main.py
 from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,12 +6,11 @@ import os
 import logging
 
 from auth import router as auth_router, verify_firebase_id_token, get_current_user
-from chat import router as chat_router # We will create this next
+from chat import router as chat_router
 from models import UserProfile, Message
-from services import process_image_with_model # We will create this next
+from services import process_image_with_model 
 from config import settings
 
-# Load environment variables (for local development)
 load_dotenv()
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -27,7 +25,7 @@ app = FastAPI(
 # CORS Middleware (Adjust allow_origins for production)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Adjust this to your frontend URL in production, e.g., ["http://localhost:5173", "https://your-frontend-domain.com"]
+    allow_origins=["*"],  # Adjust this to your frontend URL in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -46,7 +44,7 @@ async def health_check():
     """Simple health check endpoint."""
     return {"status": "healthy", "timestamp": os.getenv("START_TIME", "N/A")}
 
-# Image processing endpoint (Frontend will call this, it will then call the Model API Backend)
+# Image processing endpoint
 @app.post("/process-image")
 async def process_image_endpoint(
     request: Request,
@@ -59,12 +57,10 @@ async def process_image_endpoint(
     if not user.uid:
         raise HTTPException(status_code=401, detail="Authentication required for image processing.")
     
-    # Check if content type is multipart/form-data for file upload
     content_type = request.headers.get("Content-Type")
     if not content_type or not content_type.startswith("multipart/form-data"):
         raise HTTPException(status_code=400, detail="Invalid Content-Type. Expected multipart/form-data.")
 
-    # Get the file from the request
     try:
         form = await request.form()
         image_file = form.get("image")
