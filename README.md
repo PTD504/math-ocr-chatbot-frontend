@@ -85,7 +85,6 @@ server/
 
 - 🔒 Firebase Authentication + Custom Backend Auth Middleware
 - 🖼️ Dynamic image preview and upload with base64 conversion
-- ✨ Seamless scroll and UI transitions (no double scrollbars)
 - 📌 Smart session timeout handling for guest users
 - 🎯 Designed with clean UX for real-world usability
 
@@ -101,4 +100,4 @@ server/
 
 ## ⭐️ If you like this project
 
-Feel free to fork, star 🌟, and connect — I'm currently looking for software engineering or research internship opportunities!
+Feel free to fork, star 🌟, and connect — I'm currently seeking entry-level opportunities as an AI Engineer or AI Researcher to apply my knowledge and grow through impactful, real-world projects.
